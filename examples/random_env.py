@@ -15,6 +15,11 @@ from softgym.utils.visualization import save_numpy_as_gif
 import pyflex
 from matplotlib import pyplot as plt
 
+# Add needed environmental paths
+import os
+os.environ['PYFLEXROOT'] = os.environ['PWD'] + "/PyFlex"
+os.environ['LD_LIBRARY_PATH'] = os.environ['PYFLEXROOT'] + "/external/SDL2-2.0.4/lib/x64"
+
 
 def show_depth():
     # render rgb and depth
@@ -37,7 +42,7 @@ def show_depth():
 def main():
     parser = argparse.ArgumentParser(description='Process some integers.')
     # ['PassWater', 'PourWater', 'PourWaterAmount', 'RopeFlatten', 'ClothFold', 'ClothFlatten', 'ClothDrop', 'ClothFoldCrumpled', 'ClothFoldDrop', 'RopeConfiguration']
-    parser.add_argument('--env_name', type=str, default='ClothDrop')
+    parser.add_argument('--env_name', type=str, default='ClothDrag')
     parser.add_argument('--headless', type=int, default=0, help='Whether to run the environment with headless rendering')
     parser.add_argument('--num_variations', type=int, default=1, help='Number of environment variations to be generated')
     parser.add_argument('--save_video_dir', type=str, default='./data/', help='Path to the saved video')

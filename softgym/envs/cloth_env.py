@@ -2,7 +2,7 @@ import numpy as np
 from gym.spaces import Box
 import pyflex
 from softgym.envs.flex_env import FlexEnv
-from softgym.action_space.action_space import  Picker, PickerPickPlace, PickerQPG
+from softgym.action_space.action_space import Picker, PickerPickPlace, PickerQPG
 from softgym.action_space.robot_env import RobotBase
 from copy import deepcopy
 
@@ -19,13 +19,25 @@ class ClothEnv(FlexEnv):
         self.observation_mode = observation_mode
 
         if action_mode == 'picker':
-            self.action_tool = Picker(num_picker, picker_radius=picker_radius, particle_radius=particle_radius, picker_threshold=picker_threshold,
-                                      picker_low=(-0.4, 0., -0.4), picker_high=(1.0, 0.5, 0.4))
+            self.action_tool = Picker(
+                num_picker,
+                picker_radius=picker_radius,
+                particle_radius=particle_radius,
+                picker_threshold=picker_threshold,
+                picker_low=(-0.4, 0., -0.4),
+                picker_high=(1.0, 0.5, 0.4))
+
             self.action_space = self.action_tool.action_space
             self.picker_radius = picker_radius
         elif action_mode == 'pickerpickplace':
-            self.action_tool = PickerPickPlace(num_picker=num_picker, particle_radius=particle_radius, env=self, picker_threshold=picker_threshold,
-                                               picker_low=(-0.5, 0., -0.5), picker_high=(0.5, 0.3, 0.5))
+            self.action_tool = PickerPickPlace(
+                num_picker=num_picker,
+                particle_radius=particle_radius,
+                env=self,
+                picker_threshold=picker_threshold,
+                picker_low=(-0.5, 0., -0.5),
+                picker_high=(0.5, 0.3, 0.5))
+
             self.action_space = self.action_tool.action_space
             assert self.action_repeat == 1
         elif action_mode in ['sawyer', 'franka']:
@@ -38,6 +50,7 @@ class ClothEnv(FlexEnv):
                                          picker_low=(-0.3, 0., -0.3), picker_high=(0.3, 0.3, 0.3)
                                          )
             self.action_space = self.action_tool.action_space
+
         if observation_mode in ['key_point', 'point_cloud']:
             if observation_mode == 'key_point':
                 obs_dim = len(self._get_key_point_idx()) * 3
@@ -88,6 +101,7 @@ class ClothEnv(FlexEnv):
         return cam_pos, cam_angle
 
     def get_default_config(self):
+        #TODO: change parameters here
         """ Set the default config of the environment and load it to self.config """
         particle_radius = self.cloth_particle_radius
         if self.action_mode in ['sawyer', 'franka']:
@@ -141,7 +155,10 @@ class ClothEnv(FlexEnv):
         idx_p4 = dimx * dimy - 1
         return np.array([idx_p1, idx_p2, idx_p3, idx_p4])
 
+    # useful function to set a scene with specified cloth parameters!
+    # TODO: use this with different cloth params
     def set_scene(self, config, state=None):
+
         if self.render_mode == 'particle':
             render_mode = 1
         elif self.render_mode == 'cloth':
@@ -150,6 +167,7 @@ class ClothEnv(FlexEnv):
             render_mode = 3
         camera_params = config['camera_params'][config['camera_name']]
         env_idx = 0 if 'env_idx' not in config else config['env_idx']
+
         mass = config['mass'] if 'mass' in config else 0.5
         scene_params = np.array([*config['ClothPos'], *config['ClothSize'], *config['ClothStiff'], render_mode,
                                  *camera_params['pos'][:], *camera_params['angle'][:], camera_params['width'], camera_params['height'], mass,

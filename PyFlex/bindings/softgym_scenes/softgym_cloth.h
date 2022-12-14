@@ -87,6 +87,8 @@ public:
 
 		g_params.dynamicFriction = 0.75f;
 		g_params.particleFriction = 1.0f;
+//        g_params.dynamicFriction = 0.01f;
+//		g_params.particleFriction = 0.1f;
 		g_params.damping = 1.0f;
 		g_params.sleepThreshold = 0.02f;
 

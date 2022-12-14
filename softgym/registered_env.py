@@ -6,6 +6,7 @@ from softgym.envs.rope_configuration import RopeConfigurationEnv
 from softgym.envs.cloth_flatten import ClothFlattenEnv
 from softgym.envs.cloth_fold import ClothFoldEnv
 from softgym.envs.cloth_drop import ClothDropEnv
+from softgym.envs.cloth_drag import ClothDragEnv
 from softgym.envs.cloth_fold_crumpled import ClothFoldCrumpledEnv
 from softgym.envs.cloth_fold_drop import ClothFoldDropEnv
 
@@ -135,6 +136,17 @@ env_arg_dict = {
                       num_variations=1000,
                       use_cached_states=True,
                       deterministic=False),
+    'ClothDrag': dict(observation_mode='cam_rgb',
+                          action_mode='picker',
+                          num_picker=2,
+                          render=True,
+                          headless=True,
+                          horizon=30,
+                          action_repeat=16,
+                          render_mode='cloth',
+                          num_variations=1000,
+                          use_cached_states=True,
+                          deterministic=False),
     'PassWater': dict(observation_mode='cam_rgb',
                       action_mode='direct',
                       render=True,
@@ -187,6 +199,7 @@ SOFTGYM_ENVS = OrderedDict({
     'ClothFlatten': ClothFlattenEnv,
     'ClothFold': ClothFoldEnv,
     'ClothDrop': ClothDropEnv,
+    'ClothDrag': ClothDragEnv,
     'ClothFoldDrop': ClothFoldDropEnv,
     'ClothFlattenPPP': ClothFlattenEnv,
     'ClothFoldPPP': ClothFoldEnv,

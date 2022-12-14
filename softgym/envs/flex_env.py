@@ -169,7 +169,7 @@ class FlexEnv(gym.Env):
         self.particle_num = pyflex.get_n_particles()
         self.prev_reward = 0.
         self.time_step = 0
-        obs = self._reset()
+        obs = self._reset()         # Start the gui
         if self.recording:
             self.video_frames.append(self.render(mode='rgb_array'))
         return obs
