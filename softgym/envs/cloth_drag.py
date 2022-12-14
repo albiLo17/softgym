@@ -33,15 +33,16 @@ class ClothDragEnv(ClothBoxEnv):
             'ClothPos': [-1.6, 2.0, -0.8],
             # 'ClothSize': [64, 32],
             'ClothSize': [64, 64],
-            # 'ClothStiff': [0.9, 1.0, 0.9],  # Stretch, Bend and Shear
-            'ClothStiff': self.stiff_config[0],  # Stretch, Bend and Shear
+            'ClothStiff': [0.9, 1.0, 0.9],  # Stretch, Bend and Shear
             'camera_name': 'default_camera',
             'camera_params': {'default_camera':
                                   {'pos': np.array([1.07199, 0.94942, 1.15691]),
                                    'angle': np.array([0.633549, -0.397932, 0]),
                                    'width': self.camera_width,
                                    'height': self.camera_height}},
-            'flip_mesh': 0
+            'flip_mesh': 0,
+            'dynamic_friction': 0.75,
+            'particle_friction': 1.0,
         }
         return config
 
@@ -119,12 +120,20 @@ class ClothDragEnv(ClothBoxEnv):
                 })
             else:
                 cloth_dimx, cloth_dimy = config['ClothSize']
+                config.update({
+                    'ClothStiff': self.stiff_config[i][:3],
+                    'dynamic_friction': self.stiff_config[i][3],
+                    'particle_friction': self.stiff_config[i][4]
+                })
+
 
             # Stretch, Bend and Shear
             # TODO: add mass (flingbot)
             if vary_cloth_params:
                 stiffness = np.random.uniform(0.85, 0.95, 3)
                 cloth_mass = np.random.uniform(0.2, 2.0)
+                dynamic_friction = np.random.uniform(0.1, 0.95)
+                particle_friction = np.random.uniform(0.85, 0.95)
                 config.update({
                     'ClothStiff': stiffness,
                     # 'mass': cloth_mass,
@@ -133,9 +142,11 @@ class ClothDragEnv(ClothBoxEnv):
                     # 'mesh_bend_edges': mesh_bend_edges.reshape(-1),
                     # 'mesh_shear_edges': mesh_shear_edges.reshape(-1),
                     # 'mesh_faces': mesh_faces.reshape(-1),
+                    'dynamic_friction': dynamic_friction,
+                    'particle_friction': particle_friction
                 })
 
-            self.config = config
+            #self.config = config
             self.set_scene(config)
             self.action_tool.reset([0., -1., 0.])
 

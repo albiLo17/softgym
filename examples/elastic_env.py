@@ -14,6 +14,24 @@ os.environ['PYFLEXROOT'] = os.environ['PWD'] + "/PyFlex"
 os.environ['LD_LIBRARY_PATH'] = os.environ['PYFLEXROOT'] + "/external/SDL2-2.0.4/lib/x64"
 
 
+import matplotlib.pyplot as plt
+
+def plot_pcd(pcd):
+    fig = plt.figure(figsize=(12,7))
+    ax = fig.add_subplot(projection='3d')
+    # rotate by 90, invert
+    img = ax.scatter(pcd[:,2], pcd[:,0], pcd[:,1])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    ax.set_xlim(-0.45, 0.45)
+    ax.set_ylim(-0.45, 0.45)
+    ax.set_zlim(0, 0.9)
+
+    plt.show()
+
+
 def show_depth():
     # render rgb and depth
     img, depth = pyflex.render()
@@ -48,6 +66,7 @@ def main():
 
     # Generate and save the initial states for running this environment for the first time
     env_kwargs['use_cached_states'] = False
+    env_kwargs['observation_mode '] = 'point_cloud'      # cam_rgb, point_cloud, key_point
     env_kwargs['save_cached_states'] = False
     env_kwargs['num_variations'] = args.num_variations
     env_kwargs['render'] = True
@@ -82,7 +101,8 @@ def main():
     # stiff_configs = [[1.5, 2., 1.]]
     # stiff_configs = [[3., 2., 1.]]
 
-    # stiff_configs = [[4., 1., 1.]]
+    stiff_configs = [[0.1, 0.1, 0.1, 0.75, 1.], [4., 1., 1., 0.75, 2.],  [4., 3., 1., 3., 1.]]
+    stiff_configs = [[2., 2., 1., 0.75, 1.], [2., 2., 1., 0.75, 10.], [2., 2., 1., 3., 1.]]
 
 
     env = normalize(SOFTGYM_ENVS[args.env_name](cloth_stiff=stiff_configs, **env_kwargs))
@@ -98,6 +118,7 @@ def main():
             # intermediate frames. Only use this option for visualization as it increases computation.
             _, _, _, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
             frames.extend(info['flex_env_recorded_frames'])
+            # plot_pcd(env._get_obs().reshape(-1, 3))
             if args.test_depth:
                 show_depth()
 

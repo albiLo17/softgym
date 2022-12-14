@@ -26,10 +26,22 @@ public:
     }
 
     //params ordering: xpos, ypos, zpos, xsize, zsize, stretch, bend, shear
-    // render_type, cam_X, cam_y, cam_z, angle_x, angle_y, angle_z, width, height
+    // render_type, cam_X, cam_y, cam_z, angle_x, angle_y, angle_z, width, height, env_friction, particle_friction
 	void Initialize(py::array_t<float> scene_params, int thread_idx=0)
     {
         auto ptr = (float *) scene_params.request().ptr;
+        std::cout << "size" << scene_params.size();
+        // Print the values of the pointer
+        //std::vector<float> vec;
+        //for (int i = 0; i < N; i++) {
+        //    vec.push_back(ptr[i]);
+        //}
+        //std::cout << "Vector values: ";
+        //std::for_each(vec.begin(), vec.end(), [](float val) {
+         //   std::cout << val << " ";
+        //});
+        //std::cout << std::endl;
+
 	    float initX = ptr[0];
 	    float initY = ptr[1];
 	    float initZ = ptr[2];
@@ -51,6 +63,7 @@ public:
 
         // Cloth
         float stretchStiffness = ptr[5]; //0.9f;
+        //std::cout << "stiffness" << ptr[5];
 		float bendStiffness = ptr[6]; //1.0f;
 		float shearStiffness = ptr[7]; //0.9f;
 		int phase = NvFlexMakePhase(0, eNvFlexPhaseSelfCollide | eNvFlexPhaseSelfCollideFilter);
@@ -85,10 +98,11 @@ public:
 		g_numSubsteps = 4;
 		g_params.numIterations = 30;
 
-		g_params.dynamicFriction = 0.75f;
-		g_params.particleFriction = 1.0f;
-//        g_params.dynamicFriction = 0.01f;
-//		g_params.particleFriction = 0.1f;
+		g_params.dynamicFriction = ptr[19]; // 0.75f;
+		g_params.particleFriction = ptr[20]; //1.0f;
+		//std::cout << "dynamic friction " << ptr[19] << " particle frictions " << ptr[20];
+        //g_params.dynamicFriction = 0.01f;
+		//g_params.particlefriction = 0.1f;
 		g_params.damping = 1.0f;
 		g_params.sleepThreshold = 0.02f;
 
