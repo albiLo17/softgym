@@ -2,6 +2,13 @@ import os.path as osp
 import argparse
 import numpy as np
 
+
+# Add needed environmental paths
+import os
+os.environ['PYFLEXROOT'] = "/home/albi/Pycharm/softgym/PyFlex"
+os.environ['LD_LIBRARY_PATH'] = os.environ['PYFLEXROOT'] + "/external/SDL2-2.0.4/lib/x64"
+
+
 from softgym.registered_env import env_arg_dict, SOFTGYM_ENVS
 from softgym.utils.normalized_env import normalize
 from softgym.utils.visualization import save_numpy_as_gif
