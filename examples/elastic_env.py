@@ -8,6 +8,8 @@ from softgym.utils.visualization import save_numpy_as_gif
 import pyflex
 from matplotlib import pyplot as plt
 
+import h5py
+
 # Add needed environmental paths
 import os
 os.environ['PYFLEXROOT'] = os.environ['PWD'] + "/PyFlex"
@@ -16,6 +18,29 @@ os.environ['LD_LIBRARY_PATH'] = os.environ['PYFLEXROOT'] + "/external/SDL2-2.0.4
 
 import matplotlib.pyplot as plt
 
+def store_data_by_name(data_names, data, path):
+    hf = h5py.File(path, 'w')
+    for i in range(len(data_names)):
+        hf.create_dataset(data_names[i], data=data[i])
+    hf.close()
+
+def load_data(path):
+    f = h5py.File(path, 'r')
+    obs = np.asarray(f.get('obs'))
+    f.close()
+    return obs
+
+def make_dir(path):
+    tot_path = ''
+    for folder in path.split('/'):
+        if not folder == '.' and not folder == '':
+            tot_path = tot_path + folder + '/'
+            if not os.path.exists(tot_path):
+                os.mkdir(tot_path)
+                # print(tot_path)
+        else:
+            if folder == '.':
+                tot_path = tot_path + folder + '/'
 def plot_pcd(pcd):
     fig = plt.figure(figsize=(12,7))
     ax = fig.add_subplot(projection='3d')
@@ -59,6 +84,7 @@ def main():
     parser.add_argument('--save_video_dir', type=str, default='./data/', help='Path to the saved video')
     parser.add_argument('--img_size', type=int, default=720, help='Size of the recorded videos')
     parser.add_argument('--test_depth', type=int, default=0, help='If to test the depth rendering by showing it')
+    parser.add_argument('--save_data', type=bool, default=True, help='save trajectory in a folder')
 
     args = parser.parse_args()
 
@@ -102,31 +128,51 @@ def main():
     # stiff_configs = [[3., 2., 1.]]
 
     stiff_configs = [[0.1, 0.1, 0.1, 0.75, 1.], [4., 1., 1., 0.75, 2.],  [4., 3., 1., 3., 1.]]
-    stiff_configs = [[2., 2., 1., 0.75, 1.], [2., 2., 1., 0.75, 10.], [2., 2., 1., 3., 1.]]
+    stiff_configs = [[2., 2., 1., 0.75, 1.], [2., 2., 1., 0.01, 1.], [2., 2., 1., 10., 1.]]
+    stiff_configs = [[0.1, 1., 1., 0.75, 1.], [0.1, 1., 1., 1.5, 1.], [0.1, 1., 1.6, 2., 1.]]
 
 
     env = normalize(SOFTGYM_ENVS[args.env_name](cloth_stiff=stiff_configs, **env_kwargs))
 
     for env_idx in range(args.num_variations):
+
+        if args.save_data:
+            data_save_path = f'./data/env_{env_idx}'
+            make_dir(data_save_path)
+
+        # env.reset(config_id=env_idx)
         env.reset(config_id=env_idx)
 
-
+        config = env.get_current_config()
         frames = [env.get_image(args.img_size, args.img_size)]
+        pcds = [env._get_obs()]
         for i in range(env.horizon):
             action = np.asarray([0.1, 0.05, 0., 1.]*2)
             # By default, the environments will apply action repitition. The option of record_continuous_video provides rendering of all
             # intermediate frames. Only use this option for visualization as it increases computation.
-            _, _, _, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
+            obs, reward, done, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
+            if args.save_data:
+                save_name = "data_{:06}".format(i)
+                store_data_by_name(['obs', 'mass', 'ClothStiff', 'dynamic_friction', 'ClothSize'],
+                                   [obs, config['mass'], config['ClothStiff'], config['dynamic_friction'], config['ClothSize']],
+                                   osp.join(data_save_path, save_name))
             frames.extend(info['flex_env_recorded_frames'])
             # plot_pcd(env._get_obs().reshape(-1, 3))
             if args.test_depth:
                 show_depth()
+
+            pcds.append(env._get_obs())
+
+        if args.save_data:
+            save_name = osp.join(args.save_video_dir, args.env_name + f'_env_{i}')
 
         # if args.save_video_dir is not None:
         #     params = env._wrapped_env.get_current_config()['ClothStiff']
         #     save_name = osp.join(args.save_video_dir, args.env_name + f'_{params[0]}_{params[1]}_{params[2]}.gif')
         #     save_numpy_as_gif(np.array(frames), save_name)
         #     print('Video generated and save to {}'.format(save_name))
+
+
 
 
     print()

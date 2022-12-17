@@ -100,8 +100,8 @@ class ClothDragEnv(ClothBoxEnv):
         return np.random.randint(60, 100), np.random.randint(60, 100)
 
     def generate_env_variation(self, num_variations=1,
-                               vary_cloth_size=False,
-                               vary_cloth_params=False,
+                               vary_cloth_size=True,
+                               vary_cloth_params=True,
                                ):
         """ Generate initial states. Note: This will also change the current states! """
         max_wait_step = 500  # Maximum number of steps waiting for the cloth to stablize
@@ -115,28 +115,27 @@ class ClothDragEnv(ClothBoxEnv):
             if vary_cloth_size:
                 cloth_dimx, cloth_dimy = self._sample_cloth_size()
                 config['ClothSize'] = [cloth_dimx, cloth_dimy]
-                config.update({
-                    'ClothStiff': self.stiff_config[i],
-                })
+                # config.update({
+                #     'ClothStiff': self.stiff_config[i],
+                # })
             else:
                 cloth_dimx, cloth_dimy = config['ClothSize']
-                config.update({
-                    'ClothStiff': self.stiff_config[i][:3],
-                    'dynamic_friction': self.stiff_config[i][3],
-                    'particle_friction': self.stiff_config[i][4]
-                })
+                # config.update({
+                #     'ClothStiff': self.stiff_config[i][:3],
+                #     'dynamic_friction': self.stiff_config[i][3],
+                #     'particle_friction': self.stiff_config[i][4]
+                # })
 
 
-            # Stretch, Bend and Shear
-            # TODO: add mass (flingbot)
+
             if vary_cloth_params:
-                stiffness = np.random.uniform(0.85, 0.95, 3)
+                stiffness = [np.random.uniform(0.1, 3), np.random.uniform(0.1, 3.), np.random.uniform(0.1, 1.)]
                 cloth_mass = np.random.uniform(0.2, 2.0)
-                dynamic_friction = np.random.uniform(0.1, 0.95)
-                particle_friction = np.random.uniform(0.85, 0.95)
+                dynamic_friction = np.random.uniform(0.1, 2.)
+                particle_friction = 1.
                 config.update({
                     'ClothStiff': stiffness,
-                    # 'mass': cloth_mass,
+                    'mass': cloth_mass,
                     # 'mesh_verts': mesh_verts.reshape(-1),
                     # 'mesh_stretch_edges': mesh_stretch_edges.reshape(-1),
                     # 'mesh_bend_edges': mesh_bend_edges.reshape(-1),

@@ -113,7 +113,6 @@ class ClothBoxEnv(FlexEnv):
         return cam_pos, cam_angle
 
     def get_default_config(self):
-        #TODO: change parameters here
         """ Set the default config of the environment and load it to self.config """
         particle_radius = self.cloth_particle_radius
         if self.action_mode in ['sawyer', 'franka']:
@@ -168,7 +167,6 @@ class ClothBoxEnv(FlexEnv):
         return np.array([idx_p1, idx_p2, idx_p3, idx_p4])
 
     # useful function to set a scene with specified cloth parameters!
-    # TODO: use this with different cloth params
     def set_scene(self, config, state=None):
 
         if self.render_mode == 'particle':
