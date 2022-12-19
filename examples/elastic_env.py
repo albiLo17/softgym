@@ -80,7 +80,7 @@ def main():
     # ['PassWater', 'PourWater', 'PourWaterAmount', 'RopeFlatten', 'ClothFold', 'ClothFlatten', 'ClothDrop', 'ClothFoldCrumpled', 'ClothFoldDrop', 'RopeConfiguration']
     parser.add_argument('--env_name', type=str, default='ClothDrag')
     parser.add_argument('--headless', type=int, default=0, help='Whether to run the environment with headless rendering')
-    parser.add_argument('--num_variations', type=int, default=3, help='Number of environment variations to be generated')
+    parser.add_argument('--num_variations', type=int, default=500, help='Number of environment variations to be generated')
     parser.add_argument('--save_video_dir', type=str, default='./data/', help='Path to the saved video')
     parser.add_argument('--img_size', type=int, default=720, help='Size of the recorded videos')
     parser.add_argument('--test_depth', type=int, default=0, help='If to test the depth rendering by showing it')
@@ -135,7 +135,7 @@ def main():
     env = normalize(SOFTGYM_ENVS[args.env_name](cloth_stiff=stiff_configs, **env_kwargs))
 
     for env_idx in range(args.num_variations):
-
+        print(f'Env: {env_idx}')
         if args.save_data:
             data_save_path = f'./data/env_{env_idx}'
             make_dir(data_save_path)

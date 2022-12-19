@@ -4,9 +4,62 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import numpy as np
 import yaml
-from dataloaders.data_utils import process_datapoint
-
+import glob
+import h5py
 import utils
+
+from softgym.utils.visualization import save_numpy_as_gif, save_numpy_to_gif_matplotlib
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+def plot_pcd(pcd, elev=30, azim=-180):
+    fig = plt.figure(figsize=(12,7))
+    ax = fig.add_subplot(projection='3d', elev=elev, azim=azim)
+    # rotate by 90, invert
+    img = ax.scatter(pcd[:,2], pcd[:,0], pcd[:,1])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    ax.set_xlim(-0.45, 0.45)
+    ax.set_ylim(-0.45, 0.45)
+    ax.set_zlim(0, 0.9)
+
+    plt.show()
+class PointcloudDataset(Dataset):
+    def __init__(self, dataset_folders,):
+        super().__init__()
+        print()
+
+    def load_pcd(self, path):
+        samples = glob.glob(path + '/*')
+        samples.sort()
+        pcds = []
+        for s in samples:
+            f = h5py.File(s, 'r')
+            obs = np.asarray(f.get('obs')).reshape(-1, 3)
+            pcds.append(obs)
+            f.close()
+
+        return pcds
+
+    def visualize_points(self, pos, edge_index=None, index=None):
+        fig = plt.figure(figsize=(4, 4))
+        if edge_index is not None:
+            for (src, dst) in edge_index.t().tolist():
+                src = pos[src].tolist()
+                dst = pos[dst].tolist()
+                plt.plot([src[0], dst[0]], [src[1], dst[1]], linewidth=1, color='black')
+        if index is None:
+            plt.scatter(pos[:, 0], pos[:, 1], s=50, zorder=1000)
+        else:
+            mask = torch.zeros(pos.size(0), dtype=torch.bool)
+            mask[index] = True
+            plt.scatter(pos[~mask, 0], pos[~mask, 1], s=50, color='lightgray', zorder=1000)
+            plt.scatter(pos[mask, 0], pos[mask, 1], s=50, zorder=1000)
+        plt.axis('off')
+        plt.show()
 
 
 
@@ -189,3 +242,10 @@ class DeformableDataset(Dataset):
 
     def __len__(self):
          return self.num_datapoints
+
+
+if __name__ == '__main__':
+    path = '../examples/data/env*'
+    paths = glob.glob(path)
+
+    dataset = PointcloudDataset(paths)
