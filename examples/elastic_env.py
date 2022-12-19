@@ -151,12 +151,14 @@ def main():
             # By default, the environments will apply action repitition. The option of record_continuous_video provides rendering of all
             # intermediate frames. Only use this option for visualization as it increases computation.
             obs, reward, done, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
+
+            frames.extend(info['flex_env_recorded_frames'])
+
             if args.save_data:
                 save_name = "data_{:06}".format(i)
                 store_data_by_name(['obs', 'mass', 'ClothStiff', 'dynamic_friction', 'ClothSize'],
                                    [obs, config['mass'], config['ClothStiff'], config['dynamic_friction'], config['ClothSize']],
                                    osp.join(data_save_path, save_name))
-            frames.extend(info['flex_env_recorded_frames'])
             # plot_pcd(env._get_obs().reshape(-1, 3))
             if args.test_depth:
                 show_depth()
