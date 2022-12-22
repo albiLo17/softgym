@@ -146,6 +146,7 @@ class ClothBoxEnv(FlexEnv):
             keypoint_pos = particle_pos[self._get_key_point_idx(), :3]
             pos = keypoint_pos
 
+        # if observations with positions shapes
         if self.action_mode in ['sphere', 'picker']:
             shapes = pyflex.get_shape_states()
             shapes = np.reshape(shapes, [-1, 14])

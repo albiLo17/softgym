@@ -97,7 +97,7 @@ class ClothDragEnv(ClothBoxEnv):
         pyflex.step()
 
     def _sample_cloth_size(self):
-        return np.random.randint(60, 100), np.random.randint(60, 100)
+        return np.random.randint(60, 70), np.random.randint(60, 70)
 
     def generate_env_variation(self, num_variations=1,
                                vary_cloth_size=True,
@@ -120,18 +120,19 @@ class ClothDragEnv(ClothBoxEnv):
                 # })
             else:
                 cloth_dimx, cloth_dimy = config['ClothSize']
-                # config.update({
-                #     'ClothStiff': self.stiff_config[i][:3],
-                #     'dynamic_friction': self.stiff_config[i][3],
-                #     'particle_friction': self.stiff_config[i][4]
-                # })
+                config.update({
+                    'ClothStiff': self.stiff_config[i][:3],
+                    'dynamic_friction': self.stiff_config[i][4],
+                    'particle_friction': self.stiff_config[i][5],
+                    'mass': self.stiff_config[i][3]
+                })
 
 
 
             if vary_cloth_params:
-                stiffness = [np.random.uniform(0.1, 3), np.random.uniform(0.1, 3.), np.random.uniform(0.1, 1.)]
+                stiffness = [np.random.uniform(0.5, 3), np.random.uniform(0.1, 2.), np.random.uniform(0.5, 0.9)]
                 cloth_mass = np.random.uniform(0.2, 2.0)
-                dynamic_friction = np.random.uniform(0.1, 2.)
+                dynamic_friction = np.random.uniform(1.4, 1.7)
                 particle_friction = 1.
                 config.update({
                     'ClothStiff': stiffness,
@@ -183,7 +184,8 @@ class ClothDragEnv(ClothBoxEnv):
             curr_pos[pickpoints, 3] = original_inv_mass
             pyflex.set_positions(curr_pos.flatten())
             generated_configs.append(deepcopy(config))
-            print('config {}: {}'.format(i, config['camera_params']))
+            # print('config {}: {}'.format(i, config['camera_params']))
+            print('config {}: ClothStiff: {}, mass: {}, dyn friction: {}, part friction: {}'.format(i, config['ClothStiff'], config['mass'], config['dynamic_friction'], config['particle_friction'] ))
             generated_states.append(deepcopy(self.get_state()))
         return generated_configs, generated_states
 

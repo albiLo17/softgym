@@ -7,6 +7,7 @@ import yaml
 import glob
 import h5py
 import utils
+import open3d as o3d
 
 from softgym.utils.visualization import save_numpy_as_gif, save_numpy_to_gif_matplotlib
 
@@ -28,214 +29,149 @@ def plot_pcd(pcd, elev=30, azim=-180):
 
     plt.show()
 class PointcloudDataset(Dataset):
-    def __init__(self, dataset_folders,):
+    def __init__(self, dataset_folders, num_past=3, num_pred=1, train=True):
         super().__init__()
+
+        self.data_folders = dataset_folders
+
+        self.train = train
+
+        self.num_past = num_past      # number of future predcitions
+        self.num_pred = num_pred      # number of past observations
+
+        self.voxel_size = 0.03
+        self.max_points = 0
+
+        self.look_up = []
+        self.data = self.load_data()
+        self.num_datapoints = len(self.look_up)
+
+        # Pad zeros to pcds that have different dimensions than the biggest one
+        self.pad_pcds()
+
         print()
+
+    def load_data(self):
+        self.params = []
+        self.pcds = []
+        self.actions = []
+        env = 0
+        for folder in tqdm(self.data_folders):
+            try:
+                param, pcd, action = self.load_pcd(folder)
+                self.params.append(param)
+                self.pcds.append(pcd)
+                self.actions.append(action)
+
+                tot_len = len(pcd) - self.num_past - self.num_pred
+                num_segments = tot_len
+                for seg in range(num_segments):
+                    # Plus one as we want also the observation (but not the action) of the next step
+                    self.look_up.append({'env': env,
+                                         'past': slice(self.num_past * seg, self.num_past * (seg + 1) + 1),
+                                         'pred': slice(self.num_past * (seg + 1), self.num_past * (seg + 1) + self.num_pred + 1)})
+                env += 1
+            except RuntimeError as e:
+                print(f'Folder unstable: {folder}')
+
+    def downsample_pcd(self, pcd):
+        # voxel_filter = o3d.geometry.VoxelGrid()
+        # voxel_filter.voxel_size = voxel_size
+        # downsampled_pcd = voxel_filter.filter(pcd)
+
+        vector3d_vector = o3d.utility.Vector3dVector(pcd)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = vector3d_vector
+        voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=self.voxel_size)
+        # Get all the voxels in the voxel grid
+        voxels_all = voxel_grid.get_voxels()
+        # get all the centers and colors from the voxels in the voxel grid
+        all_centers = [voxel_grid.get_voxel_center_coordinate(voxel.grid_index) for voxel in voxels_all]
+        downsampled_pcd = np.asarray(all_centers)
+
+        return downsampled_pcd
+
 
     def load_pcd(self, path):
         samples = glob.glob(path + '/*')
         samples.sort()
+
+        params = None
         pcds = []
+        actions = []
         for s in samples:
+            # TODO: set correct names
             f = h5py.File(s, 'r')
-            obs = np.asarray(f.get('obs')).reshape(-1, 3)
-            pcds.append(obs)
+            if params is None:
+                # stiff = np.asarray(f.get('ClothStiff'))
+                # size = np.asarray(f.get('ClothSize'))     # TODO: check size
+                # mass = np.asarray(f.get('mass'))
+                # friction = np.asarray(f.get('dynamic_friction'))
+
+                mass = np.asarray(f.get('ClothStiff'))
+                stiff = np.asarray(f.get('dynamic_friction'))
+                friction =np.asarray(f.get('ClothSize'))
+                params = np.append(stiff, friction)
+                params = np.append(params, mass)
+
+            pcd_pos = np.asarray(f.get('pcd_pos'))
+            # pcds.append(pcd_pos)
+            downsampled_pcd_pos = self.downsample_pcd(pcd_pos)
+            pcds.append(downsampled_pcd_pos)
+            if downsampled_pcd_pos.shape[0] > self.max_points:
+                self.max_points = downsampled_pcd_pos.shape[0]
+
+            # action = np.asarray(f.get('action'))[:3]
+            action = np.asarray(f.get('vel'))[:3]
+            actions.append(action)
             f.close()
 
-        return pcds
+        return params, pcds, actions
 
-    def visualize_points(self, pos, edge_index=None, index=None):
-        fig = plt.figure(figsize=(4, 4))
-        if edge_index is not None:
-            for (src, dst) in edge_index.t().tolist():
-                src = pos[src].tolist()
-                dst = pos[dst].tolist()
-                plt.plot([src[0], dst[0]], [src[1], dst[1]], linewidth=1, color='black')
-        if index is None:
-            plt.scatter(pos[:, 0], pos[:, 1], s=50, zorder=1000)
-        else:
-            mask = torch.zeros(pos.size(0), dtype=torch.bool)
-            mask[index] = True
-            plt.scatter(pos[~mask, 0], pos[~mask, 1], s=50, color='lightgray', zorder=1000)
-            plt.scatter(pos[mask, 0], pos[mask, 1], s=50, zorder=1000)
-        plt.axis('off')
-        plt.show()
+    def pad_pcds(self):
+        for e, env in enumerate(self.pcds):
+            for i, pcd in enumerate(env):
+                temp = np.zeros((self.max_points, 3))
+                temp[:pcd.shape[0], :] = pcd
+                self.pcds[e][i] = temp
 
-
-
-class DeformableDataset(Dataset):
-    def __init__(self, dataset_folders, args, transform=None, structured=False, shuffle=True, train=False):
-        super().__init__()
-
-        self.task = args.task
-        self.args = args
-        self.train = train
-
-        self.M = args.M
-        self.K = args.K
-
-        # Equal to M makes it easier to return the sequence of the task for the prediction
-        self.data_frequency = args.traj_frequency
-        self.delta_t = self.M       # parameter that defines the interval between two sequences of time t_1, t_2
-        self.transform = transform
-
-        # Dataset contraints. Hopefully this won't be necessary anymore
-        stream = open(args.dataset_config_file, 'r')
-        self.constraints = yaml.load(stream, Loader=yaml.FullLoader)
-
-        # TODO: normalization?
-        # self.mean = {'pulling': {'action': [], 's1': [], 's2': [], 'k': [], 'b': []},
-        #              'task': {'action': [], 's1': [], 's2': [], 'k': [], 'b': []},
-        #              'tot': {'action': [], 's1': [], 's2': [], 'k': [], 'b': []}}
-
-        # Memorize weighted adjacencies of batch if oracle
-        self.adjs = []
-        self.k = []
-        self.b = []
-        self.scale_params = args.scale_params
-        self.current_adj = []
-
-        # Load tasks
-        self.data = self.load_data(dataset_folders, args)
-        self.n_tasks = len(self.data)
-
-        self.look_up = []
-        self.look_up_tasks = []
-        self.process_data()
-        self.num_datapoints = len(self.look_up)
-
-
-        # print()
-
-    def load_data(self, dataset_folders, args):
-        data = None
-        task = args.task
-
-        # Define init and start point to load
-        s = self.constraints[task][2][0]
-        e = self.constraints[task][2][1]
-
-        self.init_graphs = []
-        for folder in dataset_folders:
-            k, b = folder.split('/')[-1].split('_')
-            k = float(k.replace('elas', ''))
-            b = float(b.replace('bend', ''))
-            self.k.append(k)
-            self.b.append(b)
-
-            tmp_data = process_datapoint(
-                data=np.load(folder + '/dataset.npy', allow_pickle=True),
-                k=k,
-                b=b,
-                ratio=args.graph_scale,
-                start_idx=s,
-                end_idx=e,
-                frequency=self.data_frequency
-            )
-
-            # data.append(tmp_data)
-            tmp_data = np.expand_dims(tmp_data, 0)
-            data = np.concatenate([data, tmp_data[0:1]], 0) if data is not None else tmp_data[0:1]
-            # self.num_datapoints += tmp_data.shape[1]
-            # self.start_task_idx.append(self.num_datapoints)
-
-        return data
-
-    def process_data(self):
-        for task in tqdm(range(len(self.data))):
-
-            task_data = self.data[task]
-
-            for i, datapoint in enumerate(task_data):
-                if len(datapoint) == 4:
-                    state1, edge1, action, force_1 = datapoint
-
-
-                edge1 = edge1[:, :3]
-
-                # Store weighted adjacency
-                if len(self.adjs) < task + 1:
-                    scale_k = 0.1  # The normal range is form 15 to 80, so scale by 0.1
-                    self.adjs.append(utils.part_anis_to_adj(edge1, state1.shape[0], k=self.k[task], b=self.b[task], scale=self.scale_params, order=1))
-
-
-                state_normalization = 1
-                action_normalization = 1
-
-                state1 = torch.from_numpy(state1).float() / state_normalization
-                edge1 = torch.from_numpy(edge1).long().T
-                action = torch.from_numpy(action).float() / action_normalization
-
-                force_1 = torch.from_numpy(force_1).float()
-
-                if len(edge1) == 0:
-                    edge1 = torch.empty(2, 0, dtype=torch.long)
-
-                # Use this in case in the edges is provided the value of k
-                data1 = Data(x=state1, edge_index=edge1[:-1])
-
-                if self.transform:
-                    data1 = self.transform(data1)
-
-
-                processed_datapoint = [data1.x, data1.adj, action, force_1]
-
-                self.data[task][i] = processed_datapoint
-
-            # define intervals for the task
-            init_length_lookup = len(self.look_up)
-            tot_len = task_data.shape[0] - self.M - self.K
-            num_segments = int(tot_len / self.delta_t)
-            for seg in range(num_segments):
-                # Plus one as we want also the observation (but not the action) of the next step
-                self.look_up.append({'task': task,
-                                     'M': torch.arange(self.M*seg,self.M*(seg+1)+1),
-                                     'K': torch.arange(self.M*(seg+1),self.M*(seg+1) + self.K+1)})
-
-            final_length_lookup = len(self.look_up)
-            # Create look up also for the entire trajectory
-            self.look_up_tasks.append(torch.arange(init_length_lookup, final_length_lookup))
-
-    def get_task_traj(self, task):
-        traj = [self._get_datapoint(segment) for segment in self.look_up_tasks[task]]
-        return traj
+    # def visualize_points(self, pos, edge_index=None, index=None):
+    #     fig = plt.figure(figsize=(4, 4))
+    #     if edge_index is not None:
+    #         for (src, dst) in edge_index.t().tolist():
+    #             src = pos[src].tolist()
+    #             dst = pos[dst].tolist()
+    #             plt.plot([src[0], dst[0]], [src[1], dst[1]], linewidth=1, color='black')
+    #     if index is None:
+    #         plt.scatter(pos[:, 0], pos[:, 1], s=50, zorder=1000)
+    #     else:
+    #         mask = torch.zeros(pos.size(0), dtype=torch.bool)
+    #         mask[index] = True
+    #         plt.scatter(pos[~mask, 0], pos[~mask, 1], s=50, color='lightgray', zorder=1000)
+    #         plt.scatter(pos[mask, 0], pos[mask, 1], s=50, zorder=1000)
+    #     plt.axis('off')
+    #     plt.show()
 
     def _get_datapoint(self, idx):
 
         # TODO: augment datapoints
 
-        task = self.look_up[idx]['task']
-        range_past = self.look_up[idx]['M']
-        range_pred = self.look_up[idx]['K']
+        env = self.look_up[idx]['env']
+        range_past = self.look_up[idx]['past']
+        range_pred = self.look_up[idx]['pred']
 
-        # Make these lists
-        past_o_g = torch.stack([a for a in self.data[task][range_past, 0]])
-        past_adj = torch.stack([a for a in self.data[task][range_past, 1]])
-        past_a = torch.stack([a for a in self.data[task][range_past[:-1], 2]])
-        past_o_f = torch.stack([a for a in self.data[task][range_past, 3]])
+        # (p_t-past, ..., p_t-1, p_t, a_t-past, ..., a_t-1)
+        past_pcd = torch.stack([torch.from_numpy(a) for a in self.pcds[env][range_past]])
+        past_a = torch.stack([torch.from_numpy(a) for a in self.actions[env][range_past][1:]])    # Start from 1 beacuse the points are coupled as (a_t, pcd_t+1)
 
-        future_o_g = torch.stack([a for a in self.data[task][range_pred, 0]])
-        future_adj = torch.stack([a for a in self.data[task][range_pred, 1]])
-        future_a = torch.stack([a for a in self.data[task][range_pred[:-1], 2]])
-        future_o_f = torch.stack([a for a in self.data[task][range_pred, 3]])
+        # (p_t, ..., p_t+future, a_t, ..., a_t+future-1)
+        future_pcd = torch.stack([torch.from_numpy(a) for a in self.pcds[env][range_pred]])
+        future_a = torch.stack([torch.from_numpy(a) for a in self.actions[env][range_pred][1:]])
 
-        params = torch.from_numpy(np.asarray([self.k[task], self.b[task]])).float()
+        params = torch.from_numpy(self.params[env]).float()
 
-        # datapoint = {'past': {'f': past_o_f, 'g': past_o_g, 'a': past_a, 'adj': past_adj},
-        #              'pred': {'f': future_o_f, 'g': future_o_g, 'a': future_a, 'adj': future_adj},
-        #              }
-        #
-        # datapoint = [past_o_g,
-        #              past_adj,
-        #              past_a,
-        #              past_o_f,
-        #              future_o_g,
-        #              future_adj,
-        #              future_a,
-        #              future_o_f
-        #              ]
+        return past_pcd, past_a, future_pcd, future_a, params
 
-        return past_o_f, past_o_g, past_a, past_adj, future_o_f, future_o_g, future_a, future_adj, params
 
     def __getitem__(self, idx):
         return self._get_datapoint(idx)
@@ -244,8 +180,12 @@ class DeformableDataset(Dataset):
          return self.num_datapoints
 
 
+
 if __name__ == '__main__':
     path = '../examples/data/env*'
     paths = glob.glob(path)
+    paths.sort()
 
-    dataset = PointcloudDataset(paths)
+    dataset = PointcloudDataset(paths[:10])
+    dataset._get_datapoint(3)
+    print()
