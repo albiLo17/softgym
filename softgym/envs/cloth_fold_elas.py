@@ -3,6 +3,7 @@ import pyflex
 from copy import deepcopy
 from softgym.envs.cloth_env import ClothEnv
 from softgym.utils.pyflex_utils import center_object
+from softgym.utils.misc import quatFromAxisAngle
 
 
 class ClothFoldElasEnv(ClothEnv):
@@ -36,7 +37,7 @@ class ClothFoldElasEnv(ClothEnv):
                                    'width': self.camera_width,
                                    'height': self.camera_height}},
             'flip_mesh': 0,
-            'dynamic_friction': 0.75,
+            'dynamic_friction': 1.75,
             'particle_friction': 1.0,
             'mass': 0.5
         }
@@ -80,7 +81,7 @@ class ClothFoldElasEnv(ClothEnv):
                     'particle_friction': particle_friction
                 })
 
-            self.set_scene(config)
+            self.set_scene(config, box=True)
             self.action_tool.reset([0., -1., 0.])
             pos = pyflex.get_positions().reshape(-1, 4)
             pos[:, :3] -= np.mean(pos, axis=0)[:3]
@@ -91,6 +92,13 @@ class ClothFoldElasEnv(ClothEnv):
             pos[:, 3] = 1
             pyflex.set_positions(pos.flatten())
             pyflex.set_velocities(np.zeros_like(pos))
+
+            # compute box params
+            center = np.array([0.2, 0.25, 0.1])
+            quat = quatFromAxisAngle([0, 0, -1.], 0.)
+            halfEdge = np.array([0.05, 0.05, 0.05])
+            pyflex.add_box(halfEdge, center, quat)
+
             for _ in range(5):  # In case if the cloth starts in the air
                 pyflex.step()
 
@@ -124,7 +132,7 @@ class ClothFoldElasEnv(ClothEnv):
         colors[self.fold_group_b[rand_index]] = rand_colors
         self.set_colors(colors)
 
-    def _reset(self):
+    def _reset(self, box=True):
         """ Right now only use one initial state. Need to make sure _reset always give the same result. Otherwise CEM will fail."""
         if hasattr(self, 'action_tool'):
             particle_pos = pyflex.get_positions().reshape(-1, 4)
@@ -145,6 +153,13 @@ class ClothFoldElasEnv(ClothEnv):
             # picker_high[0] += offset_x
             # picker_high[0] += 1.0
             # self.action_tool.update_picker_boundary(picker_low, picker_high)
+
+        if box:
+            # compute box params
+            center = np.array([0.0, -0.04, -0.0])
+            quat = quatFromAxisAngle([0, 0, -1.], 0.)
+            halfEdge = np.array([0.8, 0.05, 0.8])
+            pyflex.add_box(halfEdge, center, quat)
 
         config = self.get_current_config()
         num_particles = np.prod(config['ClothSize'], dtype=int)

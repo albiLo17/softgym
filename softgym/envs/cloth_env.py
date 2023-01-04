@@ -5,7 +5,7 @@ from softgym.envs.flex_env import FlexEnv
 from softgym.action_space.action_space import Picker, PickerPickPlace, PickerQPG
 from softgym.action_space.robot_env import RobotBase
 from copy import deepcopy
-
+from softgym.utils.misc import quatFromAxisAngle
 
 class ClothEnv(FlexEnv):
     def __init__(self, observation_mode, action_mode, num_picker=2, render_mode='particle', picker_radius=0.05, picker_threshold=0.005, particle_radius=0.00625, **kwargs):
@@ -157,7 +157,7 @@ class ClothEnv(FlexEnv):
 
     # useful function to set a scene with specified cloth parameters!
     # TODO: use this with different cloth params
-    def set_scene(self, config, state=None):
+    def set_scene(self, config, state=None, box=False):
 
         if self.render_mode == 'particle':
             render_mode = 1
@@ -182,3 +182,10 @@ class ClothEnv(FlexEnv):
         if state is not None:
             self.set_state(state)
         self.current_config = deepcopy(config)
+
+        # if box:
+        #     # compute box params
+        #     center = np.array([0., 0., 0.])
+        #     quat = quatFromAxisAngle([0, 0, -1.], 0.)
+        #     halfEdge = np.array([0.05, 0.05, 0.05])
+        #     pyflex.add_box(halfEdge, center, quat)
