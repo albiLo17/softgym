@@ -171,7 +171,7 @@ class ClothEnv(FlexEnv):
         mass = config['mass'] if 'mass' in config else 0.5
         scene_params = np.array([*config['ClothPos'], *config['ClothSize'], *config['ClothStiff'], render_mode,
                                  *camera_params['pos'][:], *camera_params['angle'][:], camera_params['width'], camera_params['height'], mass,
-                                 config['flip_mesh']])
+                                 config['flip_mesh'], config['dynamic_friction'], config['particle_friction']])
         if self.version == 2:
             robot_params = [1.] if self.action_mode in ['sawyer', 'franka'] else []
             self.params = (scene_params, robot_params)

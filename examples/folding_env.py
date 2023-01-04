@@ -41,7 +41,7 @@ def generate_trajectory(env, num_points=10):
             y = waypoints[-1][1] - max_height / (num_points / 2)
 
         z = key_point_pos[0][2] * (1 - t) + key_point_pos[1][2] * t
-        actions.append(np.asarray([x - waypoints[-1][0], y - waypoints[-1][1], z - waypoints[-1][2], 1])*10)
+        actions.append(np.asarray([x - waypoints[-1][0], y - waypoints[-1][1], z - waypoints[-1][2], 1])*13)
         waypoints.append([x, y, z])
 
     return waypoints, actions
@@ -166,8 +166,8 @@ def main():
 
     frames = [env.get_image(args.img_size, args.img_size)]
 
-    waypoints, actions = generate_trajectory(env, num_points=env.horizon)
-    for i in range(env.horizon):
+    waypoints, actions = generate_trajectory(env, num_points=int(env.horizon/4))
+    for i in range(len(actions)):
         action = env.action_space.sample()
         action[-1] = 1.
 

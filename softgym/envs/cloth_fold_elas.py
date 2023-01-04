@@ -29,7 +29,7 @@ class ClothFoldElasEnv(ClothEnv):
             'ClothPos': [-1.6, 2.0, -0.8],
             # 'ClothSize': [64, 32],
             'ClothSize': [64, 64],
-            'ClothStiff': [0.9, 1.0, 0.9],  # Stretch, Bend and Shear
+            'ClothStiff': [3.9, 1.0, 0.1], # [0.9, 1.0, 0.9],  # Stretch, Bend and Shear
             'camera_name': 'default_camera',
             'camera_params': {'default_camera':
                                   {'pos': np.array([1.07199, 0.94942, 1.15691]),
@@ -37,15 +37,15 @@ class ClothFoldElasEnv(ClothEnv):
                                    'width': self.camera_width,
                                    'height': self.camera_height}},
             'flip_mesh': 0,
-            'dynamic_friction': 1.75,
+            'dynamic_friction': 0.75,   # 0.75
             'particle_friction': 1.0,
-            'mass': 0.5
+            'mass': 0.005 #0.5
         }
         return config
 
     def generate_env_variation(self,
                                num_variations=2,
-                               vary_cloth_size=True,
+                               vary_cloth_size=False,
                                vary_cloth_params=False,
                                ):
         """ Generate initial states. Note: This will also change the current states! """
@@ -132,7 +132,7 @@ class ClothFoldElasEnv(ClothEnv):
         colors[self.fold_group_b[rand_index]] = rand_colors
         self.set_colors(colors)
 
-    def _reset(self, box=True):
+    def _reset(self, box=False):
         """ Right now only use one initial state. Need to make sure _reset always give the same result. Otherwise CEM will fail."""
         if hasattr(self, 'action_tool'):
             particle_pos = pyflex.get_positions().reshape(-1, 4)
