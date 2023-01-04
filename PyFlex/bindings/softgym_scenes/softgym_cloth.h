@@ -30,7 +30,7 @@ public:
 	void Initialize(py::array_t<float> scene_params, int thread_idx=0)
     {
         auto ptr = (float *) scene_params.request().ptr;
-        std::cout << "size" << scene_params.size();
+//        std::cout << "size" << scene_params.size();
         // Print the values of the pointer
         //std::vector<float> vec;
         //for (int i = 0; i < N; i++) {
@@ -100,7 +100,7 @@ public:
 
 		g_params.dynamicFriction = ptr[19]; // 0.75f;
 		g_params.particleFriction = ptr[20]; //1.0f;
-		//std::cout << "dynamic frictionf " << ptr[19] << " particle frictions " << ptr[20];
+		std::cout << ", dynamic friction " << ptr[19] << ", particle frictions " << ptr[20];
         //g_params.dynamicFriction = 0.01f;
 		//g_params.particlefriction = 0.1f;
 		g_params.damping = 1.0f;
