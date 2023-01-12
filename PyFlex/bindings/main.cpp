@@ -592,6 +592,8 @@ inline float sqr(float x) { return x * x; }
 using namespace std;
 
 void Init(int scene, py::array_t<float> scene_params, bool centerCamera = true, int thread_idx = 0) {
+//    std::cout << "g_scene: " << endl;
+//    std::cout << "g_scene size: " <<  g_scenes.size() << endl;
     RandInit();
     if (g_solver) {
         if (g_buffers)

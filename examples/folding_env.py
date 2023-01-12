@@ -12,7 +12,6 @@ from softgym.utils.normalized_env import normalize
 from softgym.utils.visualization import save_numpy_as_gif
 import pyflex
 import random
-from matplotlib import pyplot as plt
 
 import h5py
 
@@ -22,27 +21,50 @@ import h5py
 import matplotlib.pyplot as plt
 
 
-def generate_trajectory(env, num_points=10):
+def generate_trajectory(env, num_points=10, type='Tri'):
     particle_pos = pyflex.get_positions().reshape(-1, 4)
     p1, p2, p3, p4 = env._get_key_point_idx()
     key_point_pos = particle_pos[(p1, p2), :3]
 
-    max_height = np.linalg.norm(key_point_pos[0] - key_point_pos[1])/2
-    waypoints = [key_point_pos[0]]
-    actions = []
+    if type == 'Tri':
+        max_height = np.linalg.norm(key_point_pos[0] - key_point_pos[1])/2
+        waypoints = [key_point_pos[0]]
+        actions = []
 
-    for i in range(num_points):
-        t = i / (num_points - 1)
-        x = key_point_pos[0][0] * (1 - t) + key_point_pos[1][0] * t
+        for i in range(num_points):
+            t = i / (num_points - 1)
+            x = key_point_pos[0][0] * (1 - t) + key_point_pos[1][0] * t
 
-        if i < num_points/2:
-            y = waypoints[-1][1] + max_height/(num_points/2)
-        else:
-            y = waypoints[-1][1] - max_height / (num_points / 2)
+            if i < num_points/2:
+                y = waypoints[-1][1] + max_height/(num_points/2)
+            else:
+                y = waypoints[-1][1] - max_height / (num_points / 2)
 
-        z = key_point_pos[0][2] * (1 - t) + key_point_pos[1][2] * t
-        actions.append(np.asarray([x - waypoints[-1][0], y - waypoints[-1][1], z - waypoints[-1][2], 1])*13)
-        waypoints.append([x, y, z])
+            z = key_point_pos[0][2] * (1 - t) + key_point_pos[1][2] * t
+            actions.append(np.asarray([x - waypoints[-1][0], y - waypoints[-1][1], z - waypoints[-1][2], 1])*13)
+            waypoints.append([x, y, z])
+    if type == 'Trap':
+        max_height = np.linalg.norm(key_point_pos[0] - key_point_pos[1]) / 2
+        rise_steps = int(num_points/5)
+
+        waypoints = [key_point_pos[0]]
+        actions = []
+
+        for i in range(num_points):
+            t = i / (num_points - 1)
+            x = key_point_pos[0][0] * (1 - t) + key_point_pos[1][0] * t
+
+            if i < rise_steps:
+                y = waypoints[-1][1] + max_height / rise_steps
+            elif i >= num_points - rise_steps:
+                y = waypoints[-1][1] - max_height / rise_steps
+            else:
+                y = waypoints[-1][1]
+
+            z = key_point_pos[0][2] * (1 - t) + key_point_pos[1][2] * t
+            actions.append(np.asarray([x - waypoints[-1][0], y - waypoints[-1][1], z - waypoints[-1][2], 1]) * 13)
+            waypoints.append([x, y, z])
+        # print()
 
     return waypoints, actions
 
@@ -165,6 +187,7 @@ def main():
     env.reset()
 
     frames = [env.get_image(args.img_size, args.img_size)]
+    rewards = []
 
     waypoints, actions = generate_trajectory(env, num_points=int(env.horizon/4))
     for i in range(len(actions)):
@@ -183,11 +206,19 @@ def main():
         if args.test_depth:
             show_depth()
 
-    # if args.save_video_dir is not None:
-    #     save_name = osp.join(args.save_video_dir, args.env_name + '.gif')
-    #     save_numpy_as_gif(np.array(frames), save_name)
-    #     print('Video generated and save to {}'.format(save_name))
+        rewards.append(reward)
 
+    print(f'Final reward: {reward}')
+    if args.save_video_dir is not None:
+        save_name = osp.join(args.save_video_dir, args.env_name + '.gif')
+        save_numpy_as_gif(np.array(frames), save_name)
+        print('Video generated and save to {}'.format(save_name))
+
+    # Plot reward
+    fig = plt.figure()
+    plt.plot(rewards)
+    plt.title('Episode rewards')
+    plt.show()
 
 
     print()

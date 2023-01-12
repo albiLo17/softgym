@@ -1,7 +1,17 @@
+
 class SoftgymSoftBody : public Scene
 {
 
 public:
+    float cam_x;
+    float cam_y;
+    float cam_z;
+    float cam_angle_x;
+    float cam_angle_y;
+    float cam_angle_z;
+    int cam_width;
+    int cam_height;
+//    std::cout << "Inside softbody 1 " << endl;
 	SoftgymSoftBody(const char* name) :
 		Scene(name),
 		mRadius(0.02f),
@@ -9,6 +19,7 @@ public:
 		mPlinth(false),
 		plasticDeformation(false)
 	{
+//	    std::cout << "Inside softbody 2 " << endl;
 		const Vec3 colorPicker[7] =
 		{
 			Vec3(0.0f, 0.5f, 1.0f),
@@ -132,6 +143,15 @@ public:
 		float radius = mRadius;
 		auto ptr = (float *) scene_params.request().ptr;
 		int paramNum = (int)ptr[0];
+
+		cam_x = ptr[8];
+        cam_y = ptr[9];
+        cam_z = ptr[10];
+        cam_angle_x = ptr[11];
+        cam_angle_y = ptr[12];
+        cam_angle_z = ptr[13];
+        cam_width = int(ptr[14]);
+        cam_height = int(ptr[15]);
 
         // Update all instances with scene_params
         for (int i = 0; i < int(mInstances.size()); i++)
@@ -271,7 +291,7 @@ public:
 			g_buffers->rigidCoefficients.push_back(asset->shapeCoefficients[i]);
 		}
 
-
+		std::cout << " Plastic deformation: " << plasticDeformation;
 		// add plastic deformation data to solver, if at least one asset has non-zero plastic deformation coefficients, leave the according pointers at NULL otherwise
 		if (plasticDeformation)
 		{
@@ -377,5 +397,13 @@ public:
 
 			DrawMesh(&m, instance.mColor);
 		}
+	}
+
+	virtual void CenterCamera(void)
+	{
+		g_camPos = Vec3(cam_x, cam_y, cam_z);
+		g_camAngle = Vec3(cam_angle_x, cam_angle_y, cam_angle_z);
+		g_screenHeight = cam_height;
+		g_screenWidth = cam_width;
 	}
 };

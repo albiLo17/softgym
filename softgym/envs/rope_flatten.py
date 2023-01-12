@@ -6,6 +6,12 @@ from softgym.envs.rope_env import RopeNewEnv
 from copy import deepcopy
 from softgym.utils.pyflex_utils import random_pick_and_place, center_object
 
+# Add needed environmental paths
+import os
+os.environ['PYFLEXROOT'] = os.environ['PWD'] + "/PyFlex"
+os.environ['LD_LIBRARY_PATH'] = os.environ['PYFLEXROOT'] + "/external/SDL2-2.0.4/lib/x64"
+
+
 class RopeFlattenEnv(RopeNewEnv):
     def __init__(self, cached_states_path='rope_flatten_init_states.pkl', **kwargs):
         """
@@ -97,3 +103,26 @@ class RopeFlattenEnv(RopeNewEnv):
             'normalized_performance': normalized_performance,
             'end_point_distance': curr_endpoint_dist
         }
+
+
+if __name__ == '__main__':
+    env = RopeFlattenEnv(observation_mode='key_point',
+                  action_mode='picker',
+                  num_picker=2,
+                  render=True,
+                  headless=False,
+                  horizon=75,
+                  action_repeat=8,
+                  num_variations=1,
+                  use_cached_states=False,
+                  save_cached_states=False,
+                  deterministic=False)
+    env.reset(config=env.get_default_config())
+    for i in range(1000):
+        print(i)
+        print("right before pyflex step")
+        pyflex.step()
+        print("right after pyflex step")
+        print("right before pyflex render")
+        pyflex.render()
+        print("right after pyflex render")

@@ -5,13 +5,13 @@ from softgym.envs.flex_env import FlexEnv
 from softgym.action_space.action_space import Picker
 from softgym.action_space.robot_env import RobotBase
 from copy import deepcopy
-
+from softgym.utils.misc import quatFromAxisAngle
 # Add needed environmental paths
 import os
 os.environ['PYFLEXROOT'] = os.environ['PWD'] + "/PyFlex"
 os.environ['LD_LIBRARY_PATH'] = os.environ['PYFLEXROOT'] + "/external/SDL2-2.0.4/lib/x64"
 
-class RopeNewEnv(FlexEnv):
+class SoftNewEnv(FlexEnv):
     def __init__(self, observation_mode, action_mode, num_picker=2, horizon=75, render_mode='particle', picker_radius=0.02, **kwargs):
         self.render_mode = render_mode
         super().__init__(**kwargs)
@@ -23,7 +23,7 @@ class RopeNewEnv(FlexEnv):
         self.num_picker = num_picker
 
         if action_mode == 'picker':
-            self.action_tool = Picker(num_picker, picker_radius=picker_radius, picker_threshold=0.005, 
+            self.action_tool = Picker(num_picker, picker_radius=picker_radius, picker_threshold=0.005,
             particle_radius=0.025, picker_low=(-0.35, 0., -0.35), picker_high=(0.35, 0.3, 0.35))
             self.action_space = self.action_tool.action_space
         elif action_mode in ['sawyer', 'franka']:
@@ -51,19 +51,20 @@ class RopeNewEnv(FlexEnv):
     def get_default_config(self):
         """ Set the default config of the environment and load it to self.config """
         config = {
-            'init_pos': [0., 0., 0.],
-            'stretchstiffness': 0.9,
-            'bendingstiffness': 0.8,
-            'radius': 0.025,
-            'segment': 40,
-            'mass': 0.5,
-            'scale': 0.5,
+            'paramNum': 4,          # What is this?
+            'ClusterSpacing': 1.0,
+            'ClusterRadius': 0.0,
+            'ClusterStiffness': 0.5,
+            'dynamicFriction': 1.5,
+            'particleFriction': 1.0,
+            'ClusterPlasticThreshold': 0.0,
+            'ClusterPlasticCreep': 0.0,
             'camera_name': 'default_camera',
             'camera_params': {'default_camera':
-                                  {'pos': np.array([0, 0.85, 0]),
-                                   'angle': np.array([0 * np.pi, -90 / 180. * np.pi, 0]),
+                                  {'pos': np.array([1.07199, 0.94942, 1.15691]),
+                                   'angle': np.array([0.633549, -0.397932, 0]),
                                    'width': self.camera_width,
-                                   'height': self.camera_height}}
+                                   'height': self.camera_height}},
         }
         return config
 
@@ -105,12 +106,12 @@ class RopeNewEnv(FlexEnv):
 
         camera_params = config['camera_params'][config['camera_name']]
         params = np.array(
-            [*config['init_pos'], config['stretchstiffness'], config['bendingstiffness'], config['radius'], config['segment'], config['mass'], 
-                config['scale'], 
-                *camera_params['pos'][:], *camera_params['angle'][:], camera_params['width'], camera_params['height'], render_mode]
+            [config['paramNum'], config['ClusterSpacing'], config['ClusterRadius'], config['ClusterStiffness'], config['dynamicFriction'], config['particleFriction'],
+                config['ClusterPlasticThreshold'],
+                config['ClusterPlasticCreep'], *camera_params['angle'][:], camera_params['width'], camera_params['height'], render_mode]
             )
 
-        env_idx = 2
+        env_idx = 6
 
         if self.version == 2:
             robot_params = [1.] if self.action_mode in ['sawyer', 'franka'] else []
@@ -139,17 +140,47 @@ class RopeNewEnv(FlexEnv):
         max_y = np.max(pos[:, 2])
         return 0.5 * (min_x + max_x), 0.5 * (min_y + max_y)
 
+    def _reset(self,):
+        """ Right now only use one initial state. Need to make sure _reset always give the same result. Otherwise CEM will fail."""
+        if hasattr(self, 'action_tool'):
+            particle_pos = pyflex.get_positions().reshape(-1, 4)
+            p1, p2, p3, p4 = self._get_key_point_idx()
+            key_point_pos = particle_pos[(p1,p2), :3] # Was changed from p1, p4.
+            middle_point = np.mean(key_point_pos, axis=0)
+            self.action_tool.reset([middle_point[0], 0.1, middle_point[2]]) # take p1
+
+            picker_radius = self.action_tool.picker_radius
+            self.action_tool.update_picker_boundary([-0.5, 0., -0.5], [0.5, 0.5, 0.5])
+            self.action_tool.set_picker_pos(picker_pos=key_point_pos[0] + np.array([0., picker_radius, 0.]))
+
+
+            # picker_low = self.action_tool.picker_low
+            # picker_high = self.action_tool.picker_high
+            # offset_x = self.action_tool._get_pos()[0][0][0] - picker_low[0] - 0.3
+            # picker_low[0] += offset_x
+            # picker_high[0] += offset_x
+            # picker_high[0] += 1.0
+            # self.action_tool.update_picker_boundary(picker_low, picker_high)
+
+
+        config = self.get_current_config()
+
+        pyflex.step()
+
+        info = self._get_info()
+        return self._get_obs()
+
 
 
 if __name__ == '__main__':
-    env = RopeNewEnv(observation_mode='key_point',
+    env = SoftNewEnv(observation_mode='key_point',
                   action_mode='picker',
                   num_picker=2,
                   render=True,
                   headless=False,
                   horizon=75,
                   action_repeat=8,
-                  num_variations=10,
+                  num_variations=1,
                   use_cached_states=False,
                   save_cached_states=False,
                   deterministic=False)

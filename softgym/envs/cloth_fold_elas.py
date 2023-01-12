@@ -28,8 +28,8 @@ class ClothFoldElasEnv(ClothEnv):
         config = {
             'ClothPos': [-1.6, 2.0, -0.8],
             # 'ClothSize': [64, 32],
-            'ClothSize': [64, 64],
-            'ClothStiff': [3.9, 1.0, 0.1], # [0.9, 1.0, 0.9],  # Stretch, Bend and Shear
+            'ClothSize': [34, 34],
+            'ClothStiff': [0.9, 1.0, 0.9],  # Stretch, Bend and Shear
             'camera_name': 'default_camera',
             'camera_params': {'default_camera':
                                   {'pos': np.array([1.07199, 0.94942, 1.15691]),
@@ -37,9 +37,9 @@ class ClothFoldElasEnv(ClothEnv):
                                    'width': self.camera_width,
                                    'height': self.camera_height}},
             'flip_mesh': 0,
-            'dynamic_friction': 0.75,   # 0.75
+            'dynamic_friction': 1.5,
             'particle_friction': 1.0,
-            'mass': 0.005 #0.5
+            'mass': 0.5
         }
         return config
 
@@ -81,7 +81,7 @@ class ClothFoldElasEnv(ClothEnv):
                     'particle_friction': particle_friction
                 })
 
-            self.set_scene(config, box=True)
+            self.set_scene(config, box=False)
             self.action_tool.reset([0., -1., 0.])
             pos = pyflex.get_positions().reshape(-1, 4)
             pos[:, :3] -= np.mean(pos, axis=0)[:3]
@@ -94,10 +94,10 @@ class ClothFoldElasEnv(ClothEnv):
             pyflex.set_velocities(np.zeros_like(pos))
 
             # compute box params
-            center = np.array([0.2, 0.25, 0.1])
-            quat = quatFromAxisAngle([0, 0, -1.], 0.)
-            halfEdge = np.array([0.05, 0.05, 0.05])
-            pyflex.add_box(halfEdge, center, quat)
+            # center = np.array([0.2, 0.25, 0.1])
+            # quat = quatFromAxisAngle([0, 0, -1.], 0.)
+            # halfEdge = np.array([0.05, 0.05, 0.05])
+            # pyflex.add_box(halfEdge, center, quat)
 
             for _ in range(5):  # In case if the cloth starts in the air
                 pyflex.step()
@@ -208,7 +208,8 @@ class ClothFoldElasEnv(ClothEnv):
         # pos_group_a = pos[self.fold_group_a]
         # pos_group_b = pos[self.fold_group_b]
         # pos_group_b_init = self.init_pos[self.fold_group_b]
-        curr_dist = np.mean(np.linalg.norm(key_point_pos[:2] - key_point_pos[2:], axis=1))
+        # curr_dist = np.mean(np.linalg.norm(key_point_pos[:2] - key_point_pos[2:], axis=1))
+        curr_dist = np.mean(np.linalg.norm(key_point_pos[0] - key_point_pos[1])) + np.mean(np.linalg.norm(key_point_pos[2] - key_point_pos[3]))
         reward = -curr_dist
         return reward
 

@@ -188,12 +188,12 @@ def main():
         if args.save_data:
             save_name = osp.join(args.save_video_dir, args.env_name + f'_env_{i}')
 
-        # if args.save_video_dir is not None:
-        #     # params = env._wrapped_env.get_current_config()['ClothStiff']
-        #     params = stiff_configs[env_idx]
-        #     save_name = osp.join(args.save_video_dir, args.env_name + f'V3_det_stretch_{params[0]}_bend_{params[1]}_shear_{params[2]}_envf_{params[4]}_partf_{params[5]}_mass_{params[3]}.gif')
-        #     save_numpy_as_gif(np.array(frames), save_name)
-        #     print('Video generated and save to {}'.format(save_name))
+        if args.save_video_dir is not None:
+            # params = env._wrapped_env.get_current_config()['ClothStiff']
+            params = stiff_configs[env_idx]
+            save_name = osp.join(args.save_video_dir, args.env_name + f'V3_det_stretch_{params[0]}_bend_{params[1]}_shear_{params[2]}_envf_{params[4]}_partf_{params[5]}_mass_{params[3]}.gif')
+            save_numpy_as_gif(np.array(frames), save_name)
+            print('Video generated and save to {}'.format(save_name))
 
 
 

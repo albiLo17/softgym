@@ -274,6 +274,7 @@ float rand_float(float LO, float HI) {
 void pyflex_set_scene(int scene_idx, py::array_t<float> scene_params, int thread_idx = 0) {
     g_scene = scene_idx;
     g_selectedScene = g_scene;
+//    std::cout << "scene " << g_selectedScene;
     Init(g_selectedScene, scene_params, true, thread_idx);
 }
 
